@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="es">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bodegas Exitosas · Muebles Jamar</title>
-<link rel="preconnect" href="https://fonts.googleapis.com/">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 /* ===== RESET & VARIABLES ===== */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -329,6 +331,10 @@ td{padding:11px 16px;font-size:13px}
 .toast-item{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px;animation:toastIn .25s ease-out;box-shadow:var(--shadow-lg);pointer-events:auto}
 .toast-item.success{border-left:3px solid var(--green)}
 .toast-item.success::before{content:'✓';color:var(--green);font-weight:700}
+.toast-item.info{border-left:3px solid var(--blue)}
+.toast-item.info::before{content:'ℹ';color:var(--blue);font-weight:700}
+.toast-item.warn{border-left:3px solid var(--gold)}
+.toast-item.warn::before{content:'⚠';color:var(--gold);font-weight:700}
 @keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
 
 /* ===== SECTION DIVIDER ===== */
@@ -343,6 +349,18 @@ td{padding:11px 16px;font-size:13px}
 .add-store-btn{display:flex;align-items:center;gap:8px;padding:16px;border:2px dashed var(--border);border-radius:14px;background:none;cursor:pointer;color:var(--text3);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .2s;width:100%}
 .add-store-btn:hover{border-color:var(--gold-d);color:var(--gold-d);background:var(--gold-bg)}
 .add-store-btn .plus{width:32px;height:32px;border-radius:8px;border:1.5px dashed currentColor;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+
+/* ===== DATA SYNC BANNER ===== */
+.sync-banner{padding:8px 16px;background:var(--blue-bg);border-bottom:1px solid rgba(37,99,235,.15);font-size:11px;color:var(--blue);display:flex;align-items:center;gap:6px;animation:fadeIn .3s}
+.sync-banner.error{background:var(--red-bg);color:var(--red);border-color:rgba(220,38,38,.15)}
+.sync-banner.ok{background:var(--green-bg);color:var(--green);border-color:rgba(5,150,105,.15)}
+
+/* ===== BACKUP BUTTONS ===== */
+.sb-backup{padding:8px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px;background:var(--bg2)}
+.sb-backup .backup-btn{width:100%;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:none;border:1px solid var(--border);color:var(--text3);cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .15s;text-align:left}
+.sb-backup .backup-btn:hover{background:var(--bg3);color:var(--text2);border-color:#c4cbda}
+.sb-backup .backup-btn svg{flex-shrink:0;opacity:.7}
+.sb-backup .backup-label{font-size:9px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;padding:2px 0 0}
 
 /* ===== RESPONSIVE ===== */
 @media(max-width:768px){
@@ -361,21 +379,22 @@ td{padding:11px 16px;font-size:13px}
 
 <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
 <div id="toast"></div>
+<input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJsonImport(event)">
 
-<!-- MODAL -->
+<!-- MODAL ACTIVIDAD -->
 <div class="modal-overlay" id="actModal">
   <div class="modal-bg" onclick="closeModal()"></div>
   <div class="modal-box">
     <div class="modal-head">
       <div>
         <h2 id="modalTitle">Nueva Actividad</h2>
-        <p id="modalStore">Jamar CRA 30</p>
+        <p id="modalStore">Jamar El Edén</p>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="editingActId" value="">
-      <input type="hidden" id="editingTiendaId" value="t18">
+      <input type="hidden" id="editingTiendaId" value="t0">
       <div class="field">
         <label>Nombre de la actividad *</label>
         <input type="text" id="actNombre" placeholder="Ej: Organización de bodega...">
@@ -383,22 +402,22 @@ td{padding:11px 16px;font-size:13px}
       <div class="field">
         <label>Estado</label>
         <div class="seg-group" id="estadoGroup">
-          <button class="seg-btn active-pend" data-val="pendiente" onclick="selectEstado(&#39;pendiente&#39;)">Pendiente</button>
-          <button class="seg-btn" data-val="en_proceso" onclick="selectEstado(&#39;en_proceso&#39;)">En Proceso</button>
-          <button class="seg-btn" data-val="completada" onclick="selectEstado(&#39;completada&#39;)">Completada</button>
+          <button class="seg-btn active-pend" data-val="pendiente" onclick="selectEstado('pendiente')">Pendiente</button>
+          <button class="seg-btn" data-val="en_proceso" onclick="selectEstado('en_proceso')">En Proceso</button>
+          <button class="seg-btn" data-val="completada" onclick="selectEstado('completada')">Completada</button>
         </div>
       </div>
       <div class="field">
         <label>Prioridad</label>
         <div class="seg-group" id="prioGroup">
-          <button class="seg-btn prio-baja" data-val="baja" onclick="selectPrio(&#39;baja&#39;)">Baja</button>
-          <button class="seg-btn prio-media active-p" data-val="media" onclick="selectPrio(&#39;media&#39;)">Media</button>
-          <button class="seg-btn prio-alta" data-val="alta" onclick="selectPrio(&#39;alta&#39;)">Alta</button>
-          <button class="seg-btn prio-critica" data-val="critica" onclick="selectPrio(&#39;critica&#39;)">Crítica</button>
+          <button class="seg-btn prio-baja" data-val="baja" onclick="selectPrio('baja')">Baja</button>
+          <button class="seg-btn prio-media active-p" data-val="media" onclick="selectPrio('media')">Media</button>
+          <button class="seg-btn prio-alta" data-val="alta" onclick="selectPrio('alta')">Alta</button>
+          <button class="seg-btn prio-critica" data-val="critica" onclick="selectPrio('critica')">Crítica</button>
         </div>
       </div>
       <div class="field">
-        <label>Avance: <span id="pctLabel" style="color:var(--gold-d);font-weight:800;font-family:&#39;Outfit&#39;,sans-serif">0%</span></label>
+        <label>Avance: <span id="pctLabel" style="color:var(--gold-d);font-weight:800;font-family:'Outfit',sans-serif">0%</span></label>
         <div class="range-wrap">
           <input type="range" id="actPct" min="0" max="100" step="5" value="0" oninput="updatePctLabel(this.value)">
           <span id="pctVal">0%</span>
@@ -456,7 +475,7 @@ td{padding:11px 16px;font-size:13px}
   <div id="sidebar">
     <div class="sb-logo">
       <div class="sb-icon-wrap">
-        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </div>
       <div class="sb-logo-text hide-collapsed">
         <div class="t1">Bodegas</div>
@@ -466,37 +485,51 @@ td{padding:11px 16px;font-size:13px}
     </div>
     <div class="sb-status hide-collapsed">
       <div class="status-dot saved" id="statusDot"></div>
-      <span id="statusTxt" style="color: var(--green);">Guardado 11:13</span>
+      <span id="statusTxt" style="color:var(--green)">Guardado</span>
     </div>
     <nav>
-      <button class="nav-btn active" onclick="navigate(&#39;dashboard&#39;)" id="nav-dashboard">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+      <button class="nav-btn active" onclick="navigate('dashboard')" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
         <span class="hide-collapsed">Dashboard</span>
       </button>
-      <button class="nav-btn" onclick="navigate(&#39;tiendas&#39;)" id="nav-tiendas">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+      <button class="nav-btn" onclick="navigate('tiendas')" id="nav-tiendas">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
         <span class="hide-collapsed">Tiendas</span>
       </button>
-      <button class="nav-btn" onclick="navigate(&#39;reportes&#39;)" id="nav-reportes">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      <button class="nav-btn" onclick="navigate('reportes')" id="nav-reportes">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         <span class="hide-collapsed">Reportes</span>
+      </button>
+
+      <!-- BACKUP SECTION -->
+      <div class="nav-section hide-collapsed">Respaldo</div>
+      <button class="nav-btn" onclick="exportJSON()" id="nav-export">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="hide-collapsed">Exportar JSON</span>
+      </button>
+      <button class="nav-btn" onclick="document.getElementById('jsonImportInput').click()" id="nav-import">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span class="hide-collapsed">Importar JSON</span>
       </button>
     </nav>
     <div class="sb-kpis hide-collapsed" id="sbKpis">
       <div class="sb-kpi-grid">
-        <div class="sb-kpi g"><div class="n" id="sb-verde">2</div><div class="l">Verde</div></div>
-        <div class="sb-kpi y"><div class="n" id="sb-amarillo">4</div><div class="l">Amarillo</div></div>
+        <div class="sb-kpi g"><div class="n" id="sb-verde">0</div><div class="l">Verde</div></div>
+        <div class="sb-kpi y"><div class="n" id="sb-amarillo">0</div><div class="l">Amarillo</div></div>
         <div class="sb-kpi r"><div class="n" id="sb-rojo">0</div><div class="l">Rojo</div></div>
       </div>
-      <div class="sb-global"><div class="pct" id="sb-global">78%</div><div class="lbl">Avance Global</div></div>
+      <div class="sb-global"><div class="pct" id="sb-global">0%</div><div class="lbl">Avance Global</div></div>
     </div>
     <button class="sb-collapse" onclick="toggleSidebar()">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
   </div>
 
   <!-- MAIN -->
   <div id="main">
+    <!-- SYNC BANNER (hidden by default) -->
+    <div id="syncBanner" style="display:none"></div>
+
     <div id="topbar">
       <div class="breadcrumb">
         <span>Bodegas Exitosas</span>
@@ -504,8 +537,8 @@ td{padding:11px 16px;font-size:13px}
         <span class="active" id="breadcrumbLabel">Dashboard</span>
       </div>
       <div class="tb-right">
-        <span class="tb-date" id="tbDate">jue, 21 de may</span>
-        <div class="tb-badge"><div class="tb-dot"></div><span id="globalBadge">78% global</span></div>
+        <span class="tb-date" id="tbDate"></span>
+        <div class="tb-badge"><div class="tb-dot"></div><span id="globalBadge">0% global</span></div>
       </div>
     </div>
 
@@ -516,20 +549,20 @@ td{padding:11px 16px;font-size:13px}
           <h1>Dashboard Ejecutivo</h1>
           <p>Proyecto Bodegas Exitosas — Seguimiento en tiempo real</p>
         </div>
-        <div class="kpi-grid" id="kpiGrid"><div class="kpi-card gold"><div class="kpi-icon">📈</div><div class="kpi-val">78%</div><div class="kpi-title">Avance Global</div><div class="kpi-sub">6 tiendas</div></div><div class="kpi-card blue"><div class="kpi-icon">🏪</div><div class="kpi-val">6</div><div class="kpi-title">Tiendas Activas</div><div class="kpi-sub">registradas</div></div><div class="kpi-card green"><div class="kpi-icon">✅</div><div class="kpi-val">30</div><div class="kpi-title">Completadas</div><div class="kpi-sub">de 39 total</div></div><div class="kpi-card teal"><div class="kpi-icon">⚡</div><div class="kpi-val">4</div><div class="kpi-title">En Proceso</div><div class="kpi-sub">actividades</div></div><div class="kpi-card slate"><div class="kpi-icon">⏳</div><div class="kpi-val">5</div><div class="kpi-title">Pendientes</div><div class="kpi-sub">sin iniciar</div></div><div class="kpi-card red"><div class="kpi-icon">⚠️</div><div class="kpi-val">0</div><div class="kpi-title">Tiendas en Rojo</div><div class="kpi-sub">críticas</div></div></div>
+        <div class="kpi-grid" id="kpiGrid"></div>
         <div class="charts-row">
           <div class="chart-card">
             <div class="chart-title">📊 Ranking de Avance por Tienda</div>
-            <canvas id="chartBar" style="box-sizing: border-box; display: block; height: 280px; width: 657px;" width="657" height="280"></canvas>
+            <canvas id="chartBar"></canvas>
           </div>
           <div class="donuts-col">
             <div class="chart-card">
               <div class="chart-title">🚦 Estado Semáforo</div>
-              <canvas id="chartDonut1" style="max-height: 175px; box-sizing: border-box; display: block; height: 175px; width: 307px;" width="307" height="175"></canvas>
+              <canvas id="chartDonut1" style="max-height:175px"></canvas>
             </div>
             <div class="chart-card">
               <div class="chart-title">📋 Actividades</div>
-              <canvas id="chartDonut2" style="max-height: 175px; box-sizing: border-box; display: block; height: 175px; width: 307px;" width="307" height="175"></canvas>
+              <canvas id="chartDonut2" style="max-height:175px"></canvas>
             </div>
           </div>
         </div>
@@ -540,108 +573,14 @@ td{padding:11px 16px;font-size:13px}
             <button class="btn-primary btn-sm" onclick="openTiendaModal()" style="font-size:12px;padding:6px 12px">＋ Nueva Tienda</button>
           </div>
         </div>
-        <div class="stores-grid" id="storesGrid">
-    <div class="store-card yellow-card" onclick="navigate(&#39;detalle&#39;,&#39;t0&#39;)">
-      <button class="sc-delete" onclick="event.stopPropagation();deleteTienda(&#39;t0&#39;)" title="Eliminar tienda">🗑</button>
-      <div class="sc-top">
-        <div>
-          <div class="sc-name">Principal</div>
-          <div class="sc-resp resp-display" onclick="event.stopPropagation();startEditResp(&#39;t0&#39;,this)">📍 <span>Mariano Lozano</span> ✏️</div>
-        </div>
-        <div class="sc-circle yellow">74%</div>
-      </div>
-      <div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill yellow" style="width:74%"></div></div></div>
-      <div class="sc-foot">
-        <div style="display:flex;align-items:center;gap:6px"><span class="sem-dot yellow"></span><span style="font-size:11px;color:var(--yellow);font-weight:600">En progreso</span></div>
-        <span class="sc-acts">7 act. →</span>
-      </div>
-    </div>
-    <div class="store-card yellow-card" onclick="navigate(&#39;detalle&#39;,&#39;t11&#39;)">
-      <button class="sc-delete" onclick="event.stopPropagation();deleteTienda(&#39;t11&#39;)" title="Eliminar tienda">🗑</button>
-      <div class="sc-top">
-        <div>
-          <div class="sc-name">Jamar Norte</div>
-          <div class="sc-resp resp-display" onclick="event.stopPropagation();startEditResp(&#39;t11&#39;,this)">📍 <span>Milton Mercado</span> ✏️</div>
-        </div>
-        <div class="sc-circle yellow">75%</div>
-      </div>
-      <div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill yellow" style="width:75%"></div></div></div>
-      <div class="sc-foot">
-        <div style="display:flex;align-items:center;gap:6px"><span class="sem-dot yellow"></span><span style="font-size:11px;color:var(--yellow);font-weight:600">En progreso</span></div>
-        <span class="sc-acts">4 act. →</span>
-      </div>
-    </div>
-    <div class="store-card yellow-card" onclick="navigate(&#39;detalle&#39;,&#39;t15&#39;)">
-      <button class="sc-delete" onclick="event.stopPropagation();deleteTienda(&#39;t15&#39;)" title="Eliminar tienda">🗑</button>
-      <div class="sc-top">
-        <div>
-          <div class="sc-name">Jamar Plaza Américas</div>
-          <div class="sc-resp resp-display" onclick="event.stopPropagation();startEditResp(&#39;t15&#39;,this)">📍 <span>Álvaro Gutierrez</span> ✏️</div>
-        </div>
-        <div class="sc-circle yellow">73%</div>
-      </div>
-      <div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill yellow" style="width:73%"></div></div></div>
-      <div class="sc-foot">
-        <div style="display:flex;align-items:center;gap:6px"><span class="sem-dot yellow"></span><span style="font-size:11px;color:var(--yellow);font-weight:600">En progreso</span></div>
-        <span class="sc-acts">7 act. →</span>
-      </div>
-    </div>
-    <div class="store-card green-card" onclick="navigate(&#39;detalle&#39;,&#39;t16&#39;)">
-      <button class="sc-delete" onclick="event.stopPropagation();deleteTienda(&#39;t16&#39;)" title="Eliminar tienda">🗑</button>
-      <div class="sc-top">
-        <div>
-          <div class="sc-name">Jamar Norte Bogotá</div>
-          <div class="sc-resp resp-display" onclick="event.stopPropagation();startEditResp(&#39;t16&#39;,this)">📍 <span>Miguel Buitrago</span> ✏️</div>
-        </div>
-        <div class="sc-circle green">86%</div>
-      </div>
-      <div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill green" style="width:86%"></div></div></div>
-      <div class="sc-foot">
-        <div style="display:flex;align-items:center;gap:6px"><span class="sem-dot green"></span><span style="font-size:11px;color:var(--green);font-weight:600">Óptimo</span></div>
-        <span class="sc-acts">7 act. →</span>
-      </div>
-    </div>
-    <div class="store-card yellow-card" onclick="navigate(&#39;detalle&#39;,&#39;t18&#39;)">
-      <button class="sc-delete" onclick="event.stopPropagation();deleteTienda(&#39;t18&#39;)" title="Eliminar tienda">🗑</button>
-      <div class="sc-top">
-        <div>
-          <div class="sc-name">Jamar El Edén</div>
-          <div class="sc-resp resp-display" onclick="event.stopPropagation();startEditResp(&#39;t18&#39;,this)">📍 <span>Camilo León</span> ✏️</div>
-        </div>
-        <div class="sc-circle yellow">71%</div>
-      </div>
-      <div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill yellow" style="width:71%"></div></div></div>
-      <div class="sc-foot">
-        <div style="display:flex;align-items:center;gap:6px"><span class="sem-dot yellow"></span><span style="font-size:11px;color:var(--yellow);font-weight:600">En progreso</span></div>
-        <span class="sc-acts">7 act. →</span>
-      </div>
-    </div>
-    <div class="store-card green-card" onclick="navigate(&#39;detalle&#39;,&#39;t19&#39;)">
-      <button class="sc-delete" onclick="event.stopPropagation();deleteTienda(&#39;t19&#39;)" title="Eliminar tienda">🗑</button>
-      <div class="sc-top">
-        <div>
-          <div class="sc-name">Jamar CRA 30</div>
-          <div class="sc-resp resp-display" onclick="event.stopPropagation();startEditResp(&#39;t19&#39;,this)">📍 <span>Diego Valero</span> ✏️</div>
-        </div>
-        <div class="sc-circle green">86%</div>
-      </div>
-      <div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill green" style="width:86%"></div></div></div>
-      <div class="sc-foot">
-        <div style="display:flex;align-items:center;gap:6px"><span class="sem-dot green"></span><span style="font-size:11px;color:var(--green);font-weight:600">Óptimo</span></div>
-        <span class="sc-acts">7 act. →</span>
-      </div>
-    </div>
-    <button class="add-store-btn" onclick="openTiendaModal()">
-      <span class="plus">＋</span>
-      <span>Agregar nueva tienda</span>
-    </button></div>
+        <div class="stores-grid" id="storesGrid"></div>
       </div>
 
       <!-- TIENDAS VIEW -->
       <div class="view" id="view-tiendas">
         <div class="page-header">
           <h1>Tiendas</h1>
-          <p id="tiendasCount">21 sedes activas</p>
+          <p id="tiendasCount">0 sedes activas</p>
         </div>
         <div class="filter-bar">
           <div class="search-wrap">
@@ -649,10 +588,10 @@ td{padding:11px 16px;font-size:13px}
             <input type="text" id="searchInput" placeholder="Buscar tienda o responsable..." oninput="renderTiendasTable()">
           </div>
           <div class="filter-pills">
-            <button class="pill" data-filter="all" onclick="setFilter(&#39;all&#39;)">Todas</button>
-            <button class="pill" data-filter="verde" onclick="setFilter(&#39;verde&#39;)" style="color:var(--green)">Verde</button>
-            <button class="pill" data-filter="amarillo" onclick="setFilter(&#39;amarillo&#39;)" style="color:var(--yellow)">Amarillo</button>
-            <button class="pill active" data-filter="rojo" onclick="setFilter(&#39;rojo&#39;)" style="color:var(--red)">Rojo</button>
+            <button class="pill active" data-filter="all" onclick="setFilter('all')">Todas</button>
+            <button class="pill" data-filter="verde" onclick="setFilter('verde')" style="color:var(--green)">Verde</button>
+            <button class="pill" data-filter="amarillo" onclick="setFilter('amarillo')" style="color:var(--yellow)">Amarillo</button>
+            <button class="pill" data-filter="rojo" onclick="setFilter('rojo')" style="color:var(--red)">Rojo</button>
           </div>
           <button class="btn-primary btn-sm" onclick="openTiendaModal()" style="margin-left:auto">＋ Nueva Tienda</button>
         </div>
@@ -660,31 +599,15 @@ td{padding:11px 16px;font-size:13px}
           <table>
             <thead>
               <tr>
-                <th onclick="sortTable(&#39;nombre&#39;)">Tienda ↕</th>
+                <th onclick="sortTable('nombre')">Tienda ↕</th>
                 <th>Responsable</th>
-                <th onclick="sortTable(&#39;avance&#39;)">Avance ↕</th>
+                <th onclick="sortTable('avance')">Avance ↕</th>
                 <th>Estado</th>
                 <th style="text-align:right">Act.</th>
                 <th style="text-align:center;width:40px"></th>
               </tr>
             </thead>
-            <tbody id="tiendasTbody">
-    <tr onclick="navigate(&#39;detalle&#39;,&#39;t18&#39;)">
-      <td><div style="display:flex;align-items:center;gap:10px"><div style="width:3px;height:30px;border-radius:2px;background:var(--red);flex-shrink:0"></div><span style="font-weight:600;color:var(--text)">Jamar El Edén</span></div></td>
-      <td style="color:var(--text3)">Camilo León</td>
-      <td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill red" style="width:43%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:13px;color:var(--red);width:38px;text-align:right">43%</span></div></td>
-      <td><div style="display:flex;align-items:center;gap:6px"><span class="sem-dot red"></span><span style="font-size:12px;color:var(--red);font-weight:600">Crítico</span></div></td>
-      <td style="text-align:right"><span style="background:var(--bg3);padding:3px 9px;border-radius:20px;font-size:12px;color:var(--text3);font-weight:500">7</span></td>
-      <td style="text-align:center"><button onclick="event.stopPropagation();deleteTienda(&#39;t18&#39;)" style="background:none;border:none;color:var(--text4);cursor:pointer;border-radius:6px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s" onmouseover="this.style.color=&#39;var(--red)&#39;;this.style.background=&#39;var(--red-bg)&#39;" onmouseout="this.style.color=&#39;var(--text4)&#39;;this.style.background=&#39;none&#39;" title="Eliminar tienda">🗑</button></td>
-    </tr>
-    <tr onclick="navigate(&#39;detalle&#39;,&#39;t0&#39;)">
-      <td><div style="display:flex;align-items:center;gap:10px"><div style="width:3px;height:30px;border-radius:2px;background:var(--red);flex-shrink:0"></div><span style="font-weight:600;color:var(--text)">Principal</span></div></td>
-      <td style="color:var(--text3)">Mariano Lozano</td>
-      <td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill red" style="width:46%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:13px;color:var(--red);width:38px;text-align:right">46%</span></div></td>
-      <td><div style="display:flex;align-items:center;gap:6px"><span class="sem-dot red"></span><span style="font-size:12px;color:var(--red);font-weight:600">Crítico</span></div></td>
-      <td style="text-align:right"><span style="background:var(--bg3);padding:3px 9px;border-radius:20px;font-size:12px;color:var(--text3);font-weight:500">7</span></td>
-      <td style="text-align:center"><button onclick="event.stopPropagation();deleteTienda(&#39;t0&#39;)" style="background:none;border:none;color:var(--text4);cursor:pointer;border-radius:6px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s" onmouseover="this.style.color=&#39;var(--red)&#39;;this.style.background=&#39;var(--red-bg)&#39;" onmouseout="this.style.color=&#39;var(--text4)&#39;;this.style.background=&#39;none&#39;" title="Eliminar tienda">🗑</button></td>
-    </tr></tbody>
+            <tbody id="tiendasTbody"></tbody>
           </table>
         </div>
       </div>
@@ -692,218 +615,25 @@ td{padding:11px 16px;font-size:13px}
       <!-- DETALLE TIENDA VIEW -->
       <div class="view" id="view-detalle">
         <div class="detail-header">
-          <button class="back-btn" onclick="navigate(&#39;tiendas&#39;)">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <button class="back-btn" onclick="navigate('tiendas')">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div style="flex:1">
-            <div style="font-family:&#39;Outfit&#39;,sans-serif;font-size:20px;font-weight:800;color:var(--text)" id="detalleName">Jamar El Edén</div>
-            <div style="font-size:13px;color:var(--text4)" id="detalleResp">Camilo León</div>
+            <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--text)" id="detalleName"></div>
+            <div style="font-size:13px;color:var(--text4)" id="detalleResp"></div>
           </div>
           <button class="btn-primary" onclick="openModal()">＋ Nueva Actividad</button>
         </div>
-        <div class="detail-stats" id="detailStats">
-    <div class="ds-card" style="border-top:3px solid var(--red)"><div class="ds-num" style="color:var(--red)">43%</div><div class="ds-lbl">Avance general</div><div class="prog-wrap"><div class="prog-track" style="height:4px"><div class="prog-fill red" style="width:43%"></div></div></div></div>
-    <div class="ds-card"><div class="ds-num" style="color:var(--text)">7</div><div class="ds-lbl">Actividades</div></div>
-    <div class="ds-card" style="border-top:3px solid var(--green)"><div class="ds-num" style="color:var(--green)">3</div><div class="ds-lbl">Completadas</div></div>
-    <div class="ds-card" style="display:flex;align-items:center;gap:12px"><span class="sem-dot red"></span><div><div style="font-size:13px;color:var(--red);font-weight:700">Crítico</div><div class="ds-lbl">Estado</div></div></div></div>
+        <div class="detail-stats" id="detailStats"></div>
         <div class="acts-card">
           <div class="acts-header">
             <div class="acts-title">Actividades</div>
             <div style="display:flex;align-items:center;gap:12px">
-              <span class="acts-meta" id="actsMeta">3/7 completadas</span>
+              <span class="acts-meta" id="actsMeta"></span>
               <button class="btn-ghost btn-sm" onclick="openModal()">＋ Agregar</button>
             </div>
           </div>
-          <div id="actsList">
-    <div class="act-row completada" id="arow_a18_0">
-      <div class="act-main" onclick="toggleActExpand(&#39;a18_0&#39;)">
-        <div class="act-toggle completada" onclick="event.stopPropagation();cycleEstado(&#39;a18_0&#39;)" title="Cambiar estado"><span style="color:#fff;font-size:10px;font-weight:900">✓</span></div>
-        <div class="act-info">
-          <div class="act-name">Organización de bodega</div>
-          <div class="act-badges">
-            <span class="badge estado-completada">Completada</span>
-            <span class="badge prio-critica">Crítica</span>
-            
-          </div>
-        </div>
-        <div class="act-prog" onclick="event.stopPropagation()"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill green" style="width:100%"></div></div></div><div style="text-align:right;font-size:11px;color:var(--text4);margin-top:2px;font-family:&#39;Outfit&#39;,sans-serif;font-weight:600">100%</div></div>
-        <div class="act-actions" onclick="event.stopPropagation()">
-          <button class="act-btn edit" onclick="editAct(&#39;a18_0&#39;)" title="Editar">✏️</button>
-          <button class="act-btn del" onclick="deleteAct(&#39;a18_0&#39;)" title="Eliminar">🗑️</button>
-          <button class="act-expand" id="exp_a18_0" onclick="event.stopPropagation();toggleActExpand(&#39;a18_0&#39;)">▼</button>
-        </div>
-      </div>
-      <div class="act-detail" id="det_a18_0">
-        
-        <div class="act-slider-wrap">
-          <label>Ajustar avance</label>
-          <input type="range" min="0" max="100" step="5" value="100" oninput="quickPct(&#39;a18_0&#39;,this.value)">
-          <span id="sliderVal_a18_0">100%</span>
-        </div>
-      </div>
-    </div>
-    <div class="act-row completada" id="arow_a18_1">
-      <div class="act-main" onclick="toggleActExpand(&#39;a18_1&#39;)">
-        <div class="act-toggle completada" onclick="event.stopPropagation();cycleEstado(&#39;a18_1&#39;)" title="Cambiar estado"><span style="color:#fff;font-size:10px;font-weight:900">✓</span></div>
-        <div class="act-info">
-          <div class="act-name">Inventario físico</div>
-          <div class="act-badges">
-            <span class="badge estado-completada">Completada</span>
-            <span class="badge prio-media">Media</span>
-            
-          </div>
-        </div>
-        <div class="act-prog" onclick="event.stopPropagation()"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill green" style="width:100%"></div></div></div><div style="text-align:right;font-size:11px;color:var(--text4);margin-top:2px;font-family:&#39;Outfit&#39;,sans-serif;font-weight:600">100%</div></div>
-        <div class="act-actions" onclick="event.stopPropagation()">
-          <button class="act-btn edit" onclick="editAct(&#39;a18_1&#39;)" title="Editar">✏️</button>
-          <button class="act-btn del" onclick="deleteAct(&#39;a18_1&#39;)" title="Eliminar">🗑️</button>
-          <button class="act-expand" id="exp_a18_1" onclick="event.stopPropagation();toggleActExpand(&#39;a18_1&#39;)">▼</button>
-        </div>
-      </div>
-      <div class="act-detail" id="det_a18_1">
-        
-        <div class="act-slider-wrap">
-          <label>Ajustar avance</label>
-          <input type="range" min="0" max="100" step="5" value="100" oninput="quickPct(&#39;a18_1&#39;,this.value)">
-          <span id="sliderVal_a18_1">100%</span>
-        </div>
-      </div>
-    </div>
-    <div class="act-row en_proceso" id="arow_a18_2">
-      <div class="act-main" onclick="toggleActExpand(&#39;a18_2&#39;)">
-        <div class="act-toggle en_proceso" onclick="event.stopPropagation();cycleEstado(&#39;a18_2&#39;)" title="Cambiar estado"><span style="color:var(--blue);font-size:10px">●</span></div>
-        <div class="act-info">
-          <div class="act-name">Señalización de zonas</div>
-          <div class="act-badges">
-            <span class="badge estado-en_proceso">En Proceso</span>
-            <span class="badge prio-baja">Baja</span>
-            
-          </div>
-        </div>
-        <div class="act-prog" onclick="event.stopPropagation()"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill red" style="width:0%"></div></div></div><div style="text-align:right;font-size:11px;color:var(--text4);margin-top:2px;font-family:&#39;Outfit&#39;,sans-serif;font-weight:600">0%</div></div>
-        <div class="act-actions" onclick="event.stopPropagation()">
-          <button class="act-btn edit" onclick="editAct(&#39;a18_2&#39;)" title="Editar">✏️</button>
-          <button class="act-btn del" onclick="deleteAct(&#39;a18_2&#39;)" title="Eliminar">🗑️</button>
-          <button class="act-expand" id="exp_a18_2" onclick="event.stopPropagation();toggleActExpand(&#39;a18_2&#39;)">▼</button>
-        </div>
-      </div>
-      <div class="act-detail" id="det_a18_2">
-        
-        <div class="act-slider-wrap">
-          <label>Ajustar avance</label>
-          <input type="range" min="0" max="100" step="5" value="0" oninput="quickPct(&#39;a18_2&#39;,this.value)">
-          <span id="sliderVal_a18_2">0%</span>
-        </div>
-      </div>
-    </div>
-    <div class="act-row completada" id="arow_a18_3">
-      <div class="act-main" onclick="toggleActExpand(&#39;a18_3&#39;)">
-        <div class="act-toggle completada" onclick="event.stopPropagation();cycleEstado(&#39;a18_3&#39;)" title="Cambiar estado"><span style="color:#fff;font-size:10px;font-weight:900">✓</span></div>
-        <div class="act-info">
-          <div class="act-name">Capacitación personal</div>
-          <div class="act-badges">
-            <span class="badge estado-completada">Completada</span>
-            <span class="badge prio-media">Media</span>
-            
-          </div>
-        </div>
-        <div class="act-prog" onclick="event.stopPropagation()"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill green" style="width:100%"></div></div></div><div style="text-align:right;font-size:11px;color:var(--text4);margin-top:2px;font-family:&#39;Outfit&#39;,sans-serif;font-weight:600">100%</div></div>
-        <div class="act-actions" onclick="event.stopPropagation()">
-          <button class="act-btn edit" onclick="editAct(&#39;a18_3&#39;)" title="Editar">✏️</button>
-          <button class="act-btn del" onclick="deleteAct(&#39;a18_3&#39;)" title="Eliminar">🗑️</button>
-          <button class="act-expand" id="exp_a18_3" onclick="event.stopPropagation();toggleActExpand(&#39;a18_3&#39;)">▼</button>
-        </div>
-      </div>
-      <div class="act-detail" id="det_a18_3">
-        
-        <div class="act-slider-wrap">
-          <label>Ajustar avance</label>
-          <input type="range" min="0" max="100" step="5" value="100" oninput="quickPct(&#39;a18_3&#39;,this.value)">
-          <span id="sliderVal_a18_3">100%</span>
-        </div>
-      </div>
-    </div>
-    <div class="act-row pendiente" id="arow_id_6l9vmbrfrii_1779379398687">
-      <div class="act-main" onclick="toggleActExpand(&#39;id_6l9vmbrfrii_1779379398687&#39;)">
-        <div class="act-toggle pendiente" onclick="event.stopPropagation();cycleEstado(&#39;id_6l9vmbrfrii_1779379398687&#39;)" title="Cambiar estado"></div>
-        <div class="act-info">
-          <div class="act-name">Reunión matinal</div>
-          <div class="act-badges">
-            <span class="badge estado-pendiente">Pendiente</span>
-            <span class="badge prio-media">Media</span>
-            
-          </div>
-        </div>
-        <div class="act-prog" onclick="event.stopPropagation()"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill red" style="width:0%"></div></div></div><div style="text-align:right;font-size:11px;color:var(--text4);margin-top:2px;font-family:&#39;Outfit&#39;,sans-serif;font-weight:600">0%</div></div>
-        <div class="act-actions" onclick="event.stopPropagation()">
-          <button class="act-btn edit" onclick="editAct(&#39;id_6l9vmbrfrii_1779379398687&#39;)" title="Editar">✏️</button>
-          <button class="act-btn del" onclick="deleteAct(&#39;id_6l9vmbrfrii_1779379398687&#39;)" title="Eliminar">🗑️</button>
-          <button class="act-expand" id="exp_id_6l9vmbrfrii_1779379398687" onclick="event.stopPropagation();toggleActExpand(&#39;id_6l9vmbrfrii_1779379398687&#39;)">▼</button>
-        </div>
-      </div>
-      <div class="act-detail" id="det_id_6l9vmbrfrii_1779379398687">
-        
-        <div class="act-slider-wrap">
-          <label>Ajustar avance</label>
-          <input type="range" min="0" max="100" step="5" value="0" oninput="quickPct(&#39;id_6l9vmbrfrii_1779379398687&#39;,this.value)">
-          <span id="sliderVal_id_6l9vmbrfrii_1779379398687">0%</span>
-        </div>
-      </div>
-    </div>
-    <div class="act-row pendiente" id="arow_id_4k5cp0qyzxw_1779379412852">
-      <div class="act-main" onclick="toggleActExpand(&#39;id_4k5cp0qyzxw_1779379412852&#39;)">
-        <div class="act-toggle pendiente" onclick="event.stopPropagation();cycleEstado(&#39;id_4k5cp0qyzxw_1779379412852&#39;)" title="Cambiar estado"></div>
-        <div class="act-info">
-          <div class="act-name">Delegación de tareas</div>
-          <div class="act-badges">
-            <span class="badge estado-pendiente">Pendiente</span>
-            <span class="badge prio-alta">Alta</span>
-            
-          </div>
-        </div>
-        <div class="act-prog" onclick="event.stopPropagation()"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill red" style="width:0%"></div></div></div><div style="text-align:right;font-size:11px;color:var(--text4);margin-top:2px;font-family:&#39;Outfit&#39;,sans-serif;font-weight:600">0%</div></div>
-        <div class="act-actions" onclick="event.stopPropagation()">
-          <button class="act-btn edit" onclick="editAct(&#39;id_4k5cp0qyzxw_1779379412852&#39;)" title="Editar">✏️</button>
-          <button class="act-btn del" onclick="deleteAct(&#39;id_4k5cp0qyzxw_1779379412852&#39;)" title="Eliminar">🗑️</button>
-          <button class="act-expand" id="exp_id_4k5cp0qyzxw_1779379412852" onclick="event.stopPropagation();toggleActExpand(&#39;id_4k5cp0qyzxw_1779379412852&#39;)">▼</button>
-        </div>
-      </div>
-      <div class="act-detail" id="det_id_4k5cp0qyzxw_1779379412852">
-        
-        <div class="act-slider-wrap">
-          <label>Ajustar avance</label>
-          <input type="range" min="0" max="100" step="5" value="0" oninput="quickPct(&#39;id_4k5cp0qyzxw_1779379412852&#39;,this.value)">
-          <span id="sliderVal_id_4k5cp0qyzxw_1779379412852">0%</span>
-        </div>
-      </div>
-    </div>
-    <div class="act-row pendiente" id="arow_id_89nk6lcf1lu_1779379429714">
-      <div class="act-main" onclick="toggleActExpand(&#39;id_89nk6lcf1lu_1779379429714&#39;)">
-        <div class="act-toggle pendiente" onclick="event.stopPropagation();cycleEstado(&#39;id_89nk6lcf1lu_1779379429714&#39;)" title="Cambiar estado"></div>
-        <div class="act-info">
-          <div class="act-name">Registro cierre de bodega</div>
-          <div class="act-badges">
-            <span class="badge estado-pendiente">Pendiente</span>
-            <span class="badge prio-media">Media</span>
-            
-          </div>
-        </div>
-        <div class="act-prog" onclick="event.stopPropagation()"><div class="prog-wrap"><div class="prog-track" style="height:5px"><div class="prog-fill red" style="width:0%"></div></div></div><div style="text-align:right;font-size:11px;color:var(--text4);margin-top:2px;font-family:&#39;Outfit&#39;,sans-serif;font-weight:600">0%</div></div>
-        <div class="act-actions" onclick="event.stopPropagation()">
-          <button class="act-btn edit" onclick="editAct(&#39;id_89nk6lcf1lu_1779379429714&#39;)" title="Editar">✏️</button>
-          <button class="act-btn del" onclick="deleteAct(&#39;id_89nk6lcf1lu_1779379429714&#39;)" title="Eliminar">🗑️</button>
-          <button class="act-expand" id="exp_id_89nk6lcf1lu_1779379429714" onclick="event.stopPropagation();toggleActExpand(&#39;id_89nk6lcf1lu_1779379429714&#39;)">▼</button>
-        </div>
-      </div>
-      <div class="act-detail" id="det_id_89nk6lcf1lu_1779379429714">
-        
-        <div class="act-slider-wrap">
-          <label>Ajustar avance</label>
-          <input type="range" min="0" max="100" step="5" value="0" oninput="quickPct(&#39;id_89nk6lcf1lu_1779379429714&#39;,this.value)">
-          <span id="sliderVal_id_89nk6lcf1lu_1779379429714">0%</span>
-        </div>
-      </div>
-    </div></div>
+          <div id="actsList"></div>
         </div>
       </div>
 
@@ -913,11 +643,11 @@ td{padding:11px 16px;font-size:13px}
           <h1>Reportes</h1>
           <p>Análisis detallado del proyecto</p>
         </div>
-        <div class="report-stats" id="reportStats"><div class="rstat"><div class="rv">48%</div><div class="rl">Tasa de completitud</div><div class="rs">Actividades finalizadas</div></div><div class="rstat"><div class="rv">4.5</div><div class="rl">Promedio por tienda</div><div class="rs">Actividades</div></div><div class="rstat"><div class="rv">0</div><div class="rl">Tiendas al objetivo</div><div class="rs">Avance ≥ 80%</div></div><div class="rstat"><div class="rv">2</div><div class="rl">Tiendas críticas</div><div class="rs">Avance &lt; 50%</div></div></div>
-        <div class="top-grid" id="topGrid"><div class="top-card"><div class="top-card-title">🏆 Top 5 Tiendas</div><div class="top-row"><div class="top-rank gold">1</div><div class="top-name">Jamar Norte Bogotá</div><div class="top-pct" style="color:var(--yellow)">79%</div></div><div class="top-row"><div class="top-rank gold">2</div><div class="top-name">Jamar Norte</div><div class="top-pct" style="color:var(--yellow)">75%</div></div><div class="top-row"><div class="top-rank gold">3</div><div class="top-name">Jamar CRA 30</div><div class="top-pct" style="color:var(--yellow)">57%</div></div><div class="top-row"><div class="top-rank gold">4</div><div class="top-name">Jamar El Edén</div><div class="top-pct" style="color:var(--yellow)">50%</div></div><div class="top-row"><div class="top-rank gold">5</div><div class="top-name">Principal</div><div class="top-pct" style="color:var(--red)">46%</div></div></div><div class="top-card"><div class="top-card-title">⚠️ Tiendas Críticas</div><div class="top-row"><div class="top-rank red">1</div><div class="top-name">Jamar Plaza Américas</div><div class="top-pct" style="color:var(--red)">21%</div></div><div class="top-row"><div class="top-rank red">2</div><div class="top-name">Principal</div><div class="top-pct" style="color:var(--red)">46%</div></div><div class="top-row"><div class="top-rank red">3</div><div class="top-name">Jamar El Edén</div><div class="top-pct" style="color:var(--yellow)">50%</div></div><div class="top-row"><div class="top-rank red">4</div><div class="top-name">Jamar CRA 30</div><div class="top-pct" style="color:var(--yellow)">57%</div></div><div class="top-row"><div class="top-rank red">5</div><div class="top-name">Jamar Norte</div><div class="top-pct" style="color:var(--yellow)">75%</div></div></div></div>
+        <div class="report-stats" id="reportStats"></div>
+        <div class="top-grid" id="topGrid"></div>
         <div class="chart-card" style="margin-bottom:20px">
           <div class="chart-title">📊 Ranking Completo de Avance</div>
-          <canvas id="chartBarFull" style="box-sizing: border-box; max-height: 300px; display: block; height: 300px; width: 1023px;" width="1023" height="300"></canvas>
+          <canvas id="chartBarFull" style="max-height:300px"></canvas>
         </div>
         <div class="table-wrap">
           <table>
@@ -927,7 +657,7 @@ td{padding:11px 16px;font-size:13px}
                 <th>Act.</th><th>Completadas</th><th>Avance</th>
               </tr>
             </thead>
-            <tbody id="reportTbody"><tr onclick="navigate(&#39;detalle&#39;,&#39;t16&#39;)"><td style="color:var(--text4)">1</td><td style="font-weight:600;color:var(--text)">Jamar Norte Bogotá</td><td style="color:var(--text3)">Miguel Buitrago</td><td style="text-align:center;color:var(--text3)">4</td><td style="text-align:center;color:var(--green);font-weight:600">3</td><td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:4px"><div class="prog-fill yellow" style="width:79%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:12px;color:var(--yellow);width:34px;text-align:right">79%</span></div></td></tr><tr onclick="navigate(&#39;detalle&#39;,&#39;t11&#39;)"><td style="color:var(--text4)">2</td><td style="font-weight:600;color:var(--text)">Jamar Norte</td><td style="color:var(--text3)">Milton Mercado</td><td style="text-align:center;color:var(--text3)">4</td><td style="text-align:center;color:var(--green);font-weight:600">3</td><td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:4px"><div class="prog-fill yellow" style="width:75%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:12px;color:var(--yellow);width:34px;text-align:right">75%</span></div></td></tr><tr onclick="navigate(&#39;detalle&#39;,&#39;t19&#39;)"><td style="color:var(--text4)">3</td><td style="font-weight:600;color:var(--text)">Jamar CRA 30</td><td style="color:var(--text3)">Diego Valero</td><td style="text-align:center;color:var(--text3)">4</td><td style="text-align:center;color:var(--green);font-weight:600">2</td><td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:4px"><div class="prog-fill yellow" style="width:57%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:12px;color:var(--yellow);width:34px;text-align:right">57%</span></div></td></tr><tr onclick="navigate(&#39;detalle&#39;,&#39;t18&#39;)"><td style="color:var(--text4)">4</td><td style="font-weight:600;color:var(--text)">Jamar El Edén</td><td style="color:var(--text3)">Camilo León</td><td style="text-align:center;color:var(--text3)">4</td><td style="text-align:center;color:var(--green);font-weight:600">2</td><td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:4px"><div class="prog-fill yellow" style="width:50%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:12px;color:var(--yellow);width:34px;text-align:right">50%</span></div></td></tr><tr onclick="navigate(&#39;detalle&#39;,&#39;t0&#39;)"><td style="color:var(--text4)">5</td><td style="font-weight:600;color:var(--text)">Principal</td><td style="color:var(--text3)">Mariano Lozano</td><td style="text-align:center;color:var(--text3)">7</td><td style="text-align:center;color:var(--green);font-weight:600">3</td><td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:4px"><div class="prog-fill red" style="width:46%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:12px;color:var(--red);width:34px;text-align:right">46%</span></div></td></tr><tr onclick="navigate(&#39;detalle&#39;,&#39;t15&#39;)"><td style="color:var(--text4)">6</td><td style="font-weight:600;color:var(--text)">Jamar Plaza Américas</td><td style="color:var(--text3)">Álvaro Gutierrez</td><td style="text-align:center;color:var(--text3)">4</td><td style="text-align:center;color:var(--green);font-weight:600">0</td><td><div class="td-bar"><div class="bar-inner"><div class="prog-wrap"><div class="prog-track" style="height:4px"><div class="prog-fill red" style="width:21%"></div></div></div></div><span style="font-family:&#39;Outfit&#39;,sans-serif;font-weight:800;font-size:12px;color:var(--red);width:34px;text-align:right">21%</span></div></td></tr></tbody>
+            <tbody id="reportTbody"></tbody>
           </table>
         </div>
       </div>
@@ -962,6 +692,195 @@ function initDemo(){
   save();
 }
 
+// ===== JSON EXPORT / IMPORT =====
+// ===== Almacén de keys extra del JSON (viajes, calidad, etc.) =====
+let extraJsonKeys={};
+
+function exportJSON(){
+  // Exportar en el MISMO formato del data.json del repo:
+  // { "bodegas_v2": "{\"tiendas\":[...],\"actividades\":[...]}", ...otrasKeys }
+  const exportData={...extraJsonKeys};
+  exportData.bodegas_v2=JSON.stringify({tiendas:state.tiendas,actividades:state.actividades});
+  const jsonStr=JSON.stringify(exportData,null,2);
+  const blob=new Blob([jsonStr],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='data.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('data.json exportado','success');
+}
+
+function handleJsonImport(event){
+  const file=event.target.files[0];
+  const input=event.target;
+  if(!file)return;
+  if(!file.name.toLowerCase().endsWith('.json')){toast('Solo archivos .json','warn');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      let raw=e.target.result;
+      if(raw.charCodeAt(0)===0xFEFF) raw=raw.slice(1);
+      raw=raw.trim();
+
+      let data;
+      try{ data=JSON.parse(raw); }catch(parseErr){
+        toast('Error de sintaxis en el JSON: '+parseErr.message,'warn');
+        input.value='';return;
+      }
+
+      const resolved=findValidState(data);
+      if(!resolved){
+        const keys=data&&typeof data==='object'?Object.keys(data).join(', '):'(no es objeto)';
+        toast('No se encontró bodegas_v2 ni tiendas/actividades. Keys: '+keys,'warn');
+        input.value='';return;
+      }
+
+      if(!confirm(`¿Importar respaldo?\n\nSe reemplazarán los datos actuales:\n• ${resolved.tiendas.length} tiendas\n• ${resolved.actividades.length} actividades\n\nEsta acción no se puede deshacer.`)){input.value='';return;}
+
+      // Guardar las keys extra del JSON para poder re-exportarlas
+      if(data&&typeof data==='object'&&!Array.isArray(data)){
+        extraJsonKeys={};
+        for(const k of Object.keys(data)){
+          if(k!=='bodegas_v2') extraJsonKeys[k]=data[k];
+        }
+      }
+
+      applyImportedData(resolved);
+      toast(`Importado: ${resolved.tiendas.length} tiendas, ${resolved.actividades.length} actividades`,'success');
+    }catch(err){
+      toast('Error inesperado: '+err.message,'warn');
+    }
+    input.value='';
+  };
+  reader.onerror=function(){
+    toast('No se pudo leer el archivo','warn');
+    input.value='';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+// Busca {tiendas:[], actividades:[]} en cualquier formato
+function findValidState(data){
+  if(!data||typeof data!=='object') return null;
+
+  // CASO 1: Formato directo {tiendas:[], actividades:[]}
+  if(Array.isArray(data.tiendas)&&Array.isArray(data.actividades)) return data;
+
+  // CASO 2: Formato localStorage dump — bodegas_v2 es un STRING que contiene JSON
+  if(typeof data.bodegas_v2==='string'){
+    try{
+      const inner=JSON.parse(data.bodegas_v2);
+      if(inner&&Array.isArray(inner.tiendas)&&Array.isArray(inner.actividades)) return inner;
+    }catch(e){}
+  }
+
+  // CASO 3: bodegas_v2 es un objeto ya parseado
+  if(data.bodegas_v2&&typeof data.bodegas_v2==='object'){
+    if(Array.isArray(data.bodegas_v2.tiendas)&&Array.isArray(data.bodegas_v2.actividades)) return data.bodegas_v2;
+  }
+
+  // CASO 4: Alguna otra key contiene el state (string o objeto)
+  for(const key of Object.keys(data)){
+    const val=data[key];
+    // Si es string, intentar parsear
+    if(typeof val==='string'&&val.includes('tiendas')){
+      try{
+        const inner=JSON.parse(val);
+        if(inner&&Array.isArray(inner.tiendas)&&Array.isArray(inner.actividades)) return inner;
+      }catch(e){}
+    }
+    // Si es objeto directo
+    if(val&&typeof val==='object'&&Array.isArray(val.tiendas)&&Array.isArray(val.actividades)) return val;
+  }
+
+  return null;
+}
+
+function validateStateData(data){
+  return findValidState(data)!==null;
+}
+
+function applyImportedData(data){
+  state.tiendas=Array.isArray(data.tiendas)?data.tiendas:[];
+  state.actividades=Array.isArray(data.actividades)?data.actividades:[];
+  save();
+  refreshCurrentView();
+  updateSidebar();
+}
+
+function refreshCurrentView(){
+  const active=document.querySelector('.view.active');
+  if(!active)return;
+  if(active.id==='view-dashboard')renderDashboard();
+  else if(active.id==='view-tiendas')renderTiendasTable();
+  else if(active.id==='view-reportes')renderReportes();
+  else if(active.id==='view-detalle')renderDetalle();
+}
+
+// ===== AUTO-LOAD FROM GITHUB (data.json en la misma carpeta) =====
+async function autoLoadFromGitHub(){
+  // Determinar la URL base del HTML actual
+  const baseUrl=window.location.href.substring(0,window.location.href.lastIndexOf('/')+1);
+  const jsonUrl=baseUrl+'data.json';
+  const banner=document.getElementById('syncBanner');
+
+  // Solo intentar si estamos en un servidor (no file://)
+  if(window.location.protocol==='file:'){return;}
+
+  try{
+    banner.style.display='flex';
+    banner.className='sync-banner';
+    banner.innerHTML='🔄 Buscando data.json en el repositorio...';
+
+    const resp=await fetch(jsonUrl,{cache:'no-cache'});
+    if(!resp.ok){
+      // No hay data.json — silenciosamente usar localStorage
+      banner.style.display='none';
+      return;
+    }
+    const data=await resp.json();
+    const resolved=findValidState(data);
+    if(!resolved){
+      banner.className='sync-banner error';
+      banner.innerHTML='⚠️ data.json encontrado pero formato no válido';
+      setTimeout(()=>banner.style.display='none',4000);
+      return;
+    }
+
+    // Guardar keys extra del JSON del repo para re-exportar
+    if(data&&typeof data==='object'&&!Array.isArray(data)){
+      extraJsonKeys={};
+      for(const k of Object.keys(data)){
+        if(k!=='bodegas_v2') extraJsonKeys[k]=data[k];
+      }
+    }
+
+    // Comparar: si es diferente al state actual, actualizar
+    const currentHash=JSON.stringify(state);
+    const newHash=JSON.stringify({tiendas:resolved.tiendas,actividades:resolved.actividades});
+    if(currentHash===newHash){
+      banner.className='sync-banner ok';
+      banner.innerHTML='✓ Datos sincronizados con data.json — sin cambios';
+      setTimeout(()=>banner.style.display='none',3000);
+      return;
+    }
+
+    // Aplicar datos del JSON del repo
+    applyImportedData(resolved);
+    banner.className='sync-banner ok';
+    banner.innerHTML=`✓ Datos cargados desde data.json — ${resolved.tiendas.length} tiendas, ${resolved.actividades.length} actividades`;
+    setTimeout(()=>banner.style.display='none',5000);
+
+  }catch(err){
+    // Error de red o fetch — silenciosamente continuar con localStorage
+    banner.style.display='none';
+  }
+}
+
 // ===== HELPERS =====
 function uid(){return 'id_'+Math.random().toString(36).slice(2)+'_'+Date.now();}
 function semaforo(p){return p>=80?'green':p>=50?'yellow':'red';}
@@ -979,7 +898,7 @@ function kpis(){
 // ===== STATUS =====
 function setSaving(){document.getElementById('statusDot').className='status-dot saving';document.getElementById('statusTxt').textContent='Guardando...';document.getElementById('statusTxt').style.color='var(--gold-d)';}
 function setSaved(){document.getElementById('statusDot').className='status-dot saved';document.getElementById('statusTxt').textContent='Guardado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});document.getElementById('statusTxt').style.color='var(--green)';}
-function toast(msg){const el=document.createElement('div');el.className='toast-item success';el.textContent=msg;document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3000);}
+function toast(msg,type='success'){const el=document.createElement('div');el.className='toast-item '+(type||'success');el.textContent=msg;document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3500);}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}
 function toggleMobileMenu(){const s=document.getElementById('sidebar');s.style.display=s.style.display==='flex'?'none':'flex';}
 
@@ -1093,6 +1012,7 @@ function sortTable(col){if(sortCol===col)sortDir=sortDir==='asc'?'desc':'asc';el
 function renderTiendasTable(){
   const search=(document.getElementById('searchInput')?.value||'').toLowerCase();
   let ts=getTiendasWithAvance();
+  document.getElementById('tiendasCount').textContent=ts.length+' sedes activas';
   if(currentFilter==='verde')ts=ts.filter(t=>t.avance>=80);
   else if(currentFilter==='amarillo')ts=ts.filter(t=>t.avance>=50&&t.avance<80);
   else if(currentFilter==='rojo')ts=ts.filter(t=>t.avance<50);
@@ -1226,10 +1146,7 @@ function saveTienda(){
   const maxOrden=state.tiendas.length?Math.max(...state.tiendas.map(t=>t.orden||0))+1:0;
   state.tiendas.push({id:uid(),nombre,responsable,orden:maxOrden});
   save();closeTiendaModal();
-  // Refresh current view
-  const active=document.querySelector('.view.active');
-  if(active?.id==='view-dashboard'){renderDashboard();}
-  else if(active?.id==='view-tiendas'){renderTiendasTable();}
+  refreshCurrentView();
   updateSidebar();
   toast('Tienda "'+nombre+'" agregada');
 }
@@ -1243,13 +1160,8 @@ function deleteTienda(id){
   state.tiendas=state.tiendas.filter(x=>x.id!==id);
   state.actividades=state.actividades.filter(a=>a.tienda_id!==id);
   save();
-  // If we're in the detail of this tienda, go back to tiendas
   if(currentTiendaId===id){navigate('tiendas');}
-  else{
-    const active=document.querySelector('.view.active');
-    if(active?.id==='view-dashboard')renderDashboard();
-    else if(active?.id==='view-tiendas')renderTiendasTable();
-  }
+  else{refreshCurrentView();}
   updateSidebar();
   toast('Tienda eliminada');
 }
@@ -1284,9 +1196,15 @@ if(tbDate){const now=new Date();tbDate.textContent=now.toLocaleDateString('es-CO
 Chart.defaults.color='#94a3b8';
 Chart.defaults.borderColor='rgba(226,232,240,.8)';
 Chart.defaults.font.family="'DM Sans', sans-serif";
+
+// 1. Cargar datos desde localStorage
 load();
+
+// 2. Renderizar dashboard inicial
 navigate('dashboard');
+
+// 3. Intentar auto-carga desde data.json en GitHub
+autoLoadFromGitHub();
 </script>
-
-
-</body></html>
+</body>
+</html>
